@@ -4,9 +4,6 @@ let
   ghc = reflex-platform.ghc;
   modified-ghc = ghc.override {
     overrides = self: super: {
-      # heist = doJailbreak super.heist;
-      # xmlhtml = doJailbreak super.xmlhtml;
-      # hspec-snap = doJailbreak super.hspec-snap;
       websockets-reflex = self.callPackage ../websockets-reflex/. {};
     };
   };
