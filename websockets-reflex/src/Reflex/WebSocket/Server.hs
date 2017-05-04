@@ -6,7 +6,9 @@ Stability   : experimental
 Portability : non-portable
 -}
 module Reflex.WebSocket.Server (
-    WsData
+    WsManager(..)
+  , mkWsManager
+  , WsData(..)
   , accept
   , reject
   , WsGuest
