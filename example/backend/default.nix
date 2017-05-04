@@ -6,9 +6,6 @@ let
   doJailbreak = reflex-platform.lib.doJailbreak;
   modified-ghc = ghc.override {
     overrides = self: super: {
-      # heist = doJailbreak super.heist;
-      # xmlhtml = doJailbreak super.xmlhtml;
-      # hspec-snap = doJailbreak super.hspec-snap;
       websockets-reflex = self.callPackage ../../websockets-reflex/. {};
       websockets-reflex-snap = self.callPackage ../../websockets-reflex-snap/. {};
     };
