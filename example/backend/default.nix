@@ -1,19 +1,13 @@
-{ reflex-platform ? import ../../reflex-platform {}
-, pkgs ? reflex-platform.nixpkgs.pkgs
-, common ? import ../common }:
+{ reflex-platform ? import ../../reflex-platform }:
 let 
-  ghc = reflex-platform.ghc;
-  doJailbreak = reflex-platform.lib.doJailbreak;
-  modified-ghc = ghc.override {
+  ghc = reflex-platform.ghc.override {
     overrides = self: super: {
-      websockets-reflex = self.callPackage ../../websockets-reflex/. {};
-      websockets-reflex-snap = self.callPackage ../../websockets-reflex-snap/. {};
+      websockets-reflex = self.callPackage ../../websockets-reflex { inherit reflex-platform; };
+      websockets-reflex-snap = self.callPackage ../../websockets-reflex-snap { inherit reflex-platform; };
+      common = self.callPackage ../common { inherit reflex-platform; compiler = "ghc"; };
     };
   };
-  drv = modified-ghc.callPackage ./backend.nix {
-    mkDerivation = ghc.mkDerivation;
-    common = common { compiler = modified-ghc; };
-  };
+  drv = ghc.callPackage ./backend.nix {};
 in
-drv
+  drv
 

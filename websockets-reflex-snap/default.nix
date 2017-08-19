@@ -1,15 +1,17 @@
-{ reflex-platform ? import ../reflex-platform {}
-, pkgs ? reflex-platform.nixpkgs.pkgs }:
-let 
-  ghc = reflex-platform.ghc;
-  modified-ghc = ghc.override {
+{ reflex-platform ? import ../reflex-platform.nix
+, compiler   ? "ghc"
+} :
+let
+
+  pkgs = reflex-platform.nixpkgs.pkgs;
+  ghc = reflex-platform.${compiler};
+  modifiedGhc = ghc.override {
     overrides = self: super: {
-      websockets-reflex = self.callPackage ../websockets-reflex/. {};
+      websockets-reflex = self.callPackage ../websockets-reflex/. { inherit reflex-platform compiler; };
     };
   };
-  drv = modified-ghc.callPackage ./websockets-reflex-snap.nix {
-    mkDerivation = ghc.mkDerivation;
-  };
+
+  drv = modifiedGhc.callPackage ./websockets-reflex-snap.nix {};
 in
-drv
+  drv
 

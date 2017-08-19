@@ -1,12 +1,11 @@
-{ reflex-platform ? import ../../reflex-platform {}
-, pkgs ? reflex-platform.nixpkgs.pkgs
-, common ? import ../common }:
+{ reflex-platform ? import ../../reflex-platform }:
 let 
-  ghcjs = reflex-platform.ghcjs;
-  drv = ghcjs.callPackage ./frontend.nix {
-    mkDerivation = ghcjs.mkDerivation;
-    common = common { compiler = ghcjs; };
+  ghcjs = reflex-platform.ghcjs.override {
+    overrides = self: super: {
+      common = self.callPackage ../common { inherit reflex-platform; compiler = "ghcjs"; };
+    };
   };
+  drv = ghcjs.callPackage ./frontend.nix {};
 in
-drv
+  drv
 

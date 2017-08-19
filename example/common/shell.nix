@@ -1,15 +1,6 @@
-{ nixpkgs ? import <nixpkgs> {}, compiler ? "default" }:
-
+{ reflex-platform ? import ../../reflex-platform.nix }:
 let
-
-  inherit (nixpkgs) pkgs;
-
-  haskellPackages = if compiler == "default"
-                       then pkgs.haskellPackages
-                       else pkgs.haskell.packages.${compiler};
-
-  drv = haskellPackages.callPackage ./. {};
-
+  pkgs = reflex-platform.nixpkgs.pkgs;
+  drv = import ./. { inherit reflex-platform; compiler = "ghc" };
 in
-
   if pkgs.lib.inNixShell then drv.env else drv

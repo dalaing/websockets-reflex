@@ -1,11 +1,11 @@
-{ reflex-platform ? import ../reflex-platform {}
-, pkgs ? reflex-platform.nixpkgs.pkgs }:
-let 
-  ghc = reflex-platform.ghc;
-  drv = ghc.callPackage ./websockets-reflex.nix {
-    mkDerivation = ghc.mkDerivation;
-  };
+{ reflex-platform ? import ../reflex-platform.nix
+, compiler   ? "ghc"
+} :
+let
+
+  pkgs = reflex-platform.nixpkgs.pkgs;
+  ghc = reflex-platform.${compiler};
+
+  drv = ghc.callPackage ./websockets-reflex.nix { };
 in
-drv
-
-
+  drv

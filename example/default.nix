@@ -1,11 +1,9 @@
-{ reflex-platform ? import ../reflex-platform {}
-, pkgs ? reflex-platform.nixpkgs.pkgs
-, ghc ? reflex-platform.ghc
-, ghcjs ? reflex-platform.ghcjs
+{ reflex-platform ? import ../reflex-platform.nix
 }:
 let
-  backend = ghc.callPackage ./backend { inherit reflex-platform; };
-  frontend = ghcjs.callPackage ./frontend { inherit reflex-platform; };
+  pkgs = reflex-platform.nixpkgs.pkgs;  
+  backend = reflex-platform.ghc.callPackage ./backend { inherit reflex-platform; };
+  frontend = reflex-platform.ghcjs.callPackage ./frontend { inherit reflex-platform; };
   serve = pkgs.writeScriptBin "serve" ''
     #!${pkgs.stdenv.shell}
     ${backend}/bin/backend ${frontend}/bin/frontend.jsexe/

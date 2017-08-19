@@ -68,13 +68,13 @@ counterWidget url eClose = mdo
 
   dOpen <- holdDyn False . 
            leftmost $ [
-             True <$ _webSocket_open ws
-           , False <$ _webSocket_close ws
+             True <$ ws ^. webSocket_open
+           , False <$ ws ^. webSocket_close
            ]
 
   let
     wsRes =
-      fmap (decode . fromStrict) . _webSocket_recv $ ws
+      fmap (decode . fromStrict) $ ws ^. webSocket_recv
     toTotalRes (TotalRes i) =
       Just i
     toTotalRes _ =
