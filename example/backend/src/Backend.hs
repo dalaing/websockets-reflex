@@ -41,6 +41,7 @@ import Reflex
 
 import Reflex.WebSocket.Server (WsManager(..))
 import Reflex.WebSocket.Server.Snap
+import Reflex.Basic.Host
 
 import Commands
 
@@ -290,6 +291,15 @@ app sources baseDir =
   , ("counter/indexed/:index", indexed (sIndexed sources))
   , ("", serveDirectory baseDir)
   ]
+
+wsHost ::
+  WsManager a ->
+  (forall t m. (GuestConstraintGroup t m) => Event t (WsData a) -> m b) ->
+  IO b
+wsHost wsm guest = 
+  basicHost $ do
+    eWsData <- wsData wsm
+    guest eWsData
 
 go :: String -> IO ()
 go baseDir = do

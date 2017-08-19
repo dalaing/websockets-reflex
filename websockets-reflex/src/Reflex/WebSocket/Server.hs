@@ -11,8 +11,7 @@ module Reflex.WebSocket.Server (
   , WsData(..)
   , accept
   , reject
-  , WsGuest
-  , wsHost
+  , wsData
   , module Reflex.WebSocket
   ) where
 

@@ -22,7 +22,6 @@ import Data.Functor.Identity (Identity(..))
 import Data.IORef (newIORef, readIORef, writeIORef)
 import Data.Maybe (isJust, catMaybes)
 
-import Control.Monad.Primitive (PrimMonad)
 import Control.Monad.Trans (MonadIO(..))
 
 import Control.Monad.STM (STM, atomically, retry)

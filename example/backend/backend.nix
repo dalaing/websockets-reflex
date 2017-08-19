@@ -1,7 +1,7 @@
 { mkDerivation, base, binary, bytestring, common, containers
 , dependent-map, dependent-sum, hashable, mtl, primitive, ref-tf
-, reflex, snap-core, snap-server, stdenv, stm, text, ttrie
-, websockets-reflex, websockets-reflex-snap
+, reflex, reflex-basic-host, snap-core, snap-server, stdenv, stm
+, text, ttrie, websockets-reflex, websockets-reflex-snap
 }:
 mkDerivation {
   pname = "backend";
@@ -11,13 +11,15 @@ mkDerivation {
   isExecutable = true;
   libraryHaskellDepends = [
     base binary bytestring common containers dependent-map
-    dependent-sum hashable mtl primitive reflex snap-core snap-server
-    stm text ttrie websockets-reflex websockets-reflex-snap
+    dependent-sum hashable mtl primitive reflex reflex-basic-host
+    snap-core snap-server stm text ttrie websockets-reflex
+    websockets-reflex-snap
   ];
   executableHaskellDepends = [
     base binary bytestring common containers dependent-map
-    dependent-sum hashable mtl primitive ref-tf reflex snap-core
-    snap-server stm text ttrie websockets-reflex websockets-reflex-snap
+    dependent-sum hashable mtl primitive ref-tf reflex
+    reflex-basic-host snap-core snap-server stm text ttrie
+    websockets-reflex websockets-reflex-snap
   ];
   license = stdenv.lib.licenses.bsd3;
 }

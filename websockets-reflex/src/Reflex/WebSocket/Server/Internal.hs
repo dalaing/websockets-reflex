@@ -16,7 +16,6 @@ module Reflex.WebSocket.Server.Internal where
 
 import Control.Monad (void, forever, forM_, forM)
 import Control.Concurrent (forkIO)
-import Control.Concurrent.Chan (newChan, readChan)
 import Data.Functor.Identity (Identity(..))
 import Data.Maybe (catMaybes)
 
@@ -25,18 +24,14 @@ import Control.Concurrent.STM.TVar (TVar, newTVar, readTVar, writeTVar)
 import Control.Concurrent.STM.TBQueue (TBQueue, newTBQueue, writeTBQueue, readTBQueue)
 import qualified Control.Concurrent.STM.Map as SM
 import Control.Monad.Trans (MonadIO(..))
-import Control.Monad.Primitive (PrimMonad)
-import Control.Monad.Ref (MonadRef(..))
-import Data.IORef (readIORef)
 import Data.Hashable (Hashable(..))
 
 import Data.ByteString as B
 
 import Network.WebSockets (PendingConnection, Connection, rejectRequest, acceptRequest)
 
-import Data.Dependent.Sum
 import Reflex
-import Reflex.Host.Class
+import Reflex.TriggerEvent.Class
 
 import Reflex.WebSocket (WebSocketConfig(..), WebSocket(..), webSocket)
 
@@ -115,49 +110,17 @@ accept (WsData done pending _) wsc = do
   performEvent_ $ liftIO done <$ wsClose ws
   return ws
 
-type WsGuest t m a b = ( MonadReflexHost t m
-                       , MonadHold t m
-                       , Ref m ~ Ref IO
-                       , MonadRef (HostFrame t)
-                       , Ref (HostFrame t) ~ Ref IO
-                       , MonadIO (HostFrame t)
-                       , PrimMonad (HostFrame t)
-                       )
-                     => Event t (WsData a)
-                     -> TriggerEventT t (PostBuildT t (PerformEventT t m)) b
+wsData :: 
+  ( TriggerEvent t m
+  , MonadIO m
+  ) =>
+  WsManager a ->
+  m (Event t (WsData a))
+wsData wsm = do
+  (eData, onData) <- newTriggerEvent
 
-wsHost :: WsManager a -> (forall t m. WsGuest t m a b) -> IO b
-wsHost wsm guest = do
-  events <- newChan
-  (b, ePendingRef, fc) <- runSpiderHost $ do
-    (eOpen, eOpenRef) <- newEventWithTriggerRef
-    (ePending, ePendingRef) <- newEventWithTriggerRef
+  void . liftIO . forkIO . forever $ do
+    wsd <- atomically $ waitForData wsm
+    onData wsd
 
-    (b, fc) <- hostPerformEventT . flip runPostBuildT eOpen . flip runTriggerEventT events . guest $ ePending
-
-    mTriggerO <- liftIO . readIORef $ eOpenRef
-    forM_ mTriggerO $ \t ->
-      runFireCommand fc [t :=> Identity ()] (return ())
-
-    -- do we ever want to signal that we are entirely done with a WsManager?
-
-    return (b, ePendingRef, fc)
-
-  void . forkIO . forever $ do
-    mTriggerP <- readIORef ePendingRef
-    forM_ mTriggerP $ \t -> do
-      wsd <- atomically $ waitForData wsm
-      runSpiderHost $ runFireCommand fc [t :=> Identity wsd] (return ())
-
-  -- this comes directly from reflex-dom, could potentially be brought across into reflex (probably in TriggerEvent.Base)
-  void . forkIO . forever $ do
-    ers <- readChan events
-    runSpiderHost $ do
-      mes <- liftIO $ forM ers $ \(EventTriggerRef er :=> TriggerInvocation a _) -> do
-        me <- readIORef er
-        return $ fmap (\e -> e :=> Identity a) me
-      _ <- runFireCommand fc (catMaybes mes) $ return ()
-      liftIO $ forM_ ers $ \(_ :=> TriggerInvocation _ cb) -> cb
-
-  return b
-
+  pure eData
