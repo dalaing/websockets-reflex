@@ -57,6 +57,8 @@ main = mainWidget $ el "div" $ do
     counterWidget "counter/unique" never
   el "div" $ 
     counterWidget "counter/shared" never
+  el "div" $ 
+    counterWidget "counter/shareddb" never
   el "div" $
     counterWidget "counter/bounded" never
   el "div" $ 

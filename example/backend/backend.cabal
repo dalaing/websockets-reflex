@@ -21,6 +21,7 @@ library
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base >=4.9 && <4.10
+                     , these
                      , bytestring
                      , text
                      , containers
@@ -29,6 +30,7 @@ library
                      , stm
                      , hashable
                      , ttrie
+                     , lens
                      , snap-core
                      , snap-server
                      , websockets-reflex
@@ -38,6 +40,9 @@ library
                      , dependent-map
                      , reflex
                      , reflex-basic-host
+                     , reflex-selda
+                     , selda
+                     , selda-sqlite
                      , common
   hs-source-dirs:      src
   default-language:    Haskell2010
@@ -48,6 +53,7 @@ executable backend
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base >=4.9 && <4.10
+                     , these
                      , bytestring
                      , text
                      , containers
@@ -56,6 +62,7 @@ executable backend
                      , stm
                      , hashable
                      , ttrie
+                     , lens
                      , snap-core
                      , snap-server
                      , websockets-reflex
@@ -66,6 +73,9 @@ executable backend
                      , dependent-map
                      , reflex
                      , reflex-basic-host
+                     , reflex-selda
+                     , selda
+                     , selda-sqlite
                      , common
                      , backend
   hs-source-dirs:      src
