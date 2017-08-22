@@ -17,6 +17,12 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     Backend
+                     , Backend.Common
+                     , Backend.Unique
+                     , Backend.Shared
+                     , Backend.SharedDB
+                     , Backend.Bounded
+                     -- , Backend.Indexed
                      , Util
   -- other-modules:       
   -- other-extensions:    

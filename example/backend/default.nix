@@ -6,8 +6,8 @@ let
     reflex-basic-host = pkgs.fetchFromGitHub {
       owner = "dalaing";
       repo = "reflex-basic-host";
-      rev = "3be61ad9ce92edd9c0cdb545953cc1f8c41b6921";
-      sha256 = "0g30zbz4yivg0jlwqip4qgh4bxrcwym1c7rmw9ajk8zf5x728sq7";
+      rev = "921fea4de3f9393cb50e31ec5e6c6b13427bf115";
+      sha256 = "0pwp3xyd73lpm6w5xfnwl90h03ybzjshzshxrc26wc6l25afd08p";
     };
 
     reflex-selda = pkgs.fetchFromGitHub {

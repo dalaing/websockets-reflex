@@ -66,5 +66,5 @@ main = mainWidget $ el "div" $ do
     counterWidget "counter/shareddb" never
   el "div" $
     counterWidget "counter/bounded" never
-  el "div" $
-    counterListWidget "counter/indexed/"
+  -- el "div" $
+    -- counterListWidget "counter/indexed/"
