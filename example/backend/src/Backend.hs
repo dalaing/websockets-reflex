@@ -51,7 +51,9 @@ import qualified Data.Set as Set
 
 import Reflex hiding (select)
 
-import Reflex.WebSocket.Server (WsManager(..))
+import Network.WebSockets
+
+import Reflex.WebSocket.Server
 import Reflex.WebSocket.Server.Snap
 import Reflex.Basic.Host
 
@@ -66,28 +68,29 @@ import Util
 import Backend.Common
 import Backend.Unique
 import Backend.Shared
-import Backend.SharedDB
+-- import Backend.SharedDB
 import Backend.Bounded
 -- import Backend.Indexed
 
 data Sources =
   Sources {
-    sUnique :: WsManager ()
-  , sShared :: WsManager ()
-  , sSharedDB :: WsManager ()
-  , sBounded :: WsManager ()
-  -- , sIndexed :: WsManager Int
+    sUnique :: WsManager PendingConnection
+  , sShared :: WsManager PendingConnection
+  -- , sSharedDB :: WsManager PendingConnection
+  , sBounded :: WsManager PendingConnection
+  -- , sIndexed :: WsManager PendingConnection
   }
 
 mkSources :: STM Sources
 mkSources =
   Sources <$>
 --    mkWsManager 50 <*>
-    mkWsManager 50 <*>
+--    mkWsManager 50 <*>
     mkWsManager 50 <*>
     mkWsManager 50 <*>
     mkWsManager 50
 
+{-
 indexed :: WsManager Int -> Snap ()
 indexed wsm = do
   mi <- getParam "index"
@@ -98,21 +101,22 @@ indexed wsm = do
     Just i ->
       -- TODO make sure it reads properly (use readMaybe and then proper error handling)
       wsSnap wsm (read . BC.unpack $ i)
+-}
 
 snapApp :: Sources -> String -> Snap ()
 snapApp sources baseDir =
   route [
-    ("counter/unique", wsSnap (sUnique sources) ())
-  , ("counter/shared", wsSnap (sShared sources) ())
-  , ("counter/shareddb", wsSnap (sSharedDB sources) ())
-  , ("counter/bounded", wsSnap (sBounded sources) ())
- -- , ("counter/indexed/:index", indexed (sIndexed sources))
+    ("counter/unique", wsSnap (sUnique sources))
+  , ("counter/shared", wsSnap (sShared sources))
+  , ("counter/bounded", wsSnap (sBounded sources))
   , ("", serveDirectory baseDir)
   ]
+-- , ("counter/shareddb", wsSnap (sSharedDB sources))
+-- , ("counter/indexed/:index", indexed (sIndexed sources))
 
 wsHost ::
-  WsManager a ->
-  (forall t m. GuestConstraintGroup t m => Event t (WsData a) -> m b) ->
+  WsManager PendingConnection ->
+  (forall t m. GuestConstraintGroup t m => Event t (WsData PendingConnection) -> m b) ->
   IO b
 wsHost wsm guest =
   basicHost $ do
@@ -120,8 +124,8 @@ wsHost wsm guest =
     guest eWsData
 
 wsHostDB ::
-  WsManager a ->
-  (forall t m. (GuestConstraintGroup t m, SeldaEvent t m) => Event t (WsData a) -> m b) ->
+  WsManager PendingConnection ->
+  (forall t m. (GuestConstraintGroup t m, SeldaEvent t m) => Event t (WsData PendingConnection) -> m b) ->
   IO b
 wsHostDB wsm guest =
   basicHost $ runSeldaDB (withSQLite "db.sql") $ do
@@ -133,12 +137,12 @@ go baseDir = do
   sources <- atomically mkSources
   eventThreadId1 <- forkIO $ wsHost (sUnique sources) uniqueGuest
   eventThreadId2 <- forkIO $ wsHost (sShared sources) (void . sharedGuest)
-  eventThreadId3 <- forkIO $ wsHostDB (sSharedDB sources) (void . sharedGuestDB)
+  -- eventThreadId3 <- forkIO $ wsHostDB (sSharedDB sources) (void . sharedGuestDB)
   eventThreadId4 <- forkIO $ wsHost (sBounded sources) (void . boundedGuest 3)
   -- eventThreadId5 <- forkIO $ wsHost (sIndexed sources) (void . indexedGuest)
   finally (httpServe defaultConfig $ snapApp sources baseDir) $ do
     killThread eventThreadId1
     killThread eventThreadId2
-    killThread eventThreadId3
+    -- killThread eventThreadId3
     killThread eventThreadId4
     -- killThread eventThreadId5

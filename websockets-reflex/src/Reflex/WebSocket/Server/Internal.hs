@@ -5,16 +5,16 @@ Maintainer  : dave.laing.80@gmail.com
 Stability   : experimental
 Portability : non-portable
 -}
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE DeriveFoldable #-}
-{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE RecursiveDo #-}
 module Reflex.WebSocket.Server.Internal where
 
 import Control.Monad (void, forever, forM_, forM)
+import Control.Monad.Fix (MonadFix)
 import Control.Concurrent (forkIO)
 import Data.Functor.Identity (Identity(..))
 import Data.Maybe (catMaybes)
@@ -33,7 +33,7 @@ import Network.WebSockets (PendingConnection, Connection, rejectRequest, acceptR
 import Reflex
 import Reflex.TriggerEvent.Class
 
-import Reflex.WebSocket (WebSocketConfig(..), WebSocket(..), webSocket)
+import Reflex.WebSocket
 
 newtype Ticket = Ticket Int
   deriving (Eq, Ord, Show, Hashable)
@@ -41,9 +41,8 @@ newtype Ticket = Ticket Int
 data WsData a =
   WsData {
     wsDone :: IO ()
-  , wsPending :: PendingConnection
-  , wsPayload :: a
-  } deriving (Functor, Foldable, Traversable)
+  , wsConnection :: a
+  }
 
 data WsManager a =
   WsManager (TVar Ticket) (TBQueue (WsData a)) (SM.Map Ticket ())
@@ -84,12 +83,12 @@ reject :: ( PerformEvent t m
           , MonadIO (Performable m)
           )
        => Behavior t B.ByteString
-       -> Event t (WsData a)
+       -> Event t (WsData PendingConnection)
        -> m ()
 reject b e =
   let
     go r w = liftIO $ do
-      rejectRequest (wsPending w) r
+      rejectRequest (wsConnection w) r
       wsDone w
   in
     performEvent_ $ go <$> b <@> e
@@ -100,17 +99,35 @@ accept :: ( MonadHold t m
           , PostBuild t m
           , MonadIO (Performable m)
           , MonadIO m
+          , MonadFix m
           )
-       => WsData a
+       => WsData PendingConnection
        -> WebSocketConfig t
+       -> Event t ()
        -> m (WebSocket t)
-accept (WsData done pending _) wsc = do
+accept (WsData done pending) wsc eDone = do
   conn <- liftIO $ acceptRequest pending
   ws <- webSocket conn wsc
-  performEvent_ $ liftIO done <$ wsClose ws
+  performEvent_ $ liftIO done <$ eDone
   return ws
 
-wsData :: 
+connect :: ( MonadHold t m
+           , TriggerEvent t m
+           , PerformEvent t m
+           , PostBuild t m
+           , MonadIO (Performable m)
+           , MonadIO m
+           , MonadFix m
+           )
+        => WsData Connection
+        -> WebSocketConfig t
+        -> m (WebSocket t)
+connect (WsData done conn) wsc = do
+  ws <- webSocket conn wsc
+  performEvent_ $ liftIO done <$ wsClosed ws
+  return ws
+
+wsData ::
   ( TriggerEvent t m
   , MonadIO m
   ) =>
@@ -124,3 +141,14 @@ wsData wsm = do
     onData wsd
 
   pure eData
+
+handleConnection ::
+  WsManager a ->
+  a ->
+  IO ()
+handleConnection wsm a = do
+  t <- atomically $ do
+    t <- getTicket wsm
+    sendData wsm $ WsData (atomically $ sendDone wsm t) a
+    return t
+  atomically $ waitForDone wsm t

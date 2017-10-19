@@ -26,6 +26,7 @@ import qualified Data.Set as Set
 
 import Reflex
 
+import Network.WebSockets
 import Reflex.WebSocket.Server
 
 import Commands
@@ -65,14 +66,15 @@ instance Ord k => Monoid (SharedWriter k) where
 
 acceptShared ::
   ( GuestConstraintSingle t m
+  , MonadAdjust t m
   , Ord k
   )=>
   k ->
   Dynamic t Int ->
-  WsData a ->
+  WsData PendingConnection ->
   EventWriterT t (SharedWriter k) m ()
 acceptShared k dTotal w = mdo
-  WebSocket eRead eOpen _ eClose <- accept w (WebSocketConfig eWrite never)
+  WebSocket eRead eOpen _ eClose <- accept w (WebSocketConfig eWrite never) never
 
   let
     eWrite = encodeResponse .
@@ -90,7 +92,7 @@ acceptShared k dTotal w = mdo
 sharedGuest ::
   forall t m a.
   GuestConstraintGroup t m =>
-  Event t (WsData a) ->
+  Event t (WsData PendingConnection) ->
   m (Dynamic t Int)
 sharedGuest eInsert = mdo
 
@@ -105,8 +107,8 @@ sharedGuest eInsert = mdo
   (_, eSharedWriter) <-
     runEventWriterT .
     listWithKey dModel $ \k dv -> do
-      v <- sample . current $ dv
-      acceptShared k dTotal v
+      wsd <- sample . current $ dv
+      acceptShared k dTotal wsd
 
   let
     eRequest =

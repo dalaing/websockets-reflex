@@ -10,20 +10,15 @@ module Reflex.WebSocket.Server.Snap (
   , module Reflex.WebSocket.Server
   ) where
 
-import Control.Monad.STM (atomically)
-
 import Snap.Core (Snap)
+import Network.WebSockets (PendingConnection)
 import Network.WebSockets.Snap (runWebSocketsSnap)
 
-import Reflex.WebSocket.Server
-import Reflex.WebSocket.Server.Internal (WsManager, WsData(..), getTicket, sendData, sendDone, waitForDone)
+import Reflex.WebSocket.Server (WsManager, handleConnection)
 
-wsSnap :: WsManager a -> a -> Snap ()
-wsSnap wsm x =
-  runWebSocketsSnap $ \pending -> do
-    t <- atomically $ do
-      t <- getTicket wsm
-      sendData wsm $ WsData (atomically $ sendDone wsm t) pending x
-      return t
-    atomically $ waitForDone wsm t
+wsSnap :: 
+  WsManager PendingConnection -> 
+  Snap ()
+wsSnap wsm =
+  runWebSocketsSnap (handleConnection wsm)
 

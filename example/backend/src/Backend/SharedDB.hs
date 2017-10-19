@@ -52,25 +52,37 @@ snapshotTable :: Table (RowID :*: Int)
   $    primary "id"
   :*:  required "total"
 
-{-
 loadSnapshot ::
   MonadSelda m =>
   m (Maybe (RowID :*: Int))
 loadSnapshot = do
   tryCreateTable snapshotTable
 
-  -- try to read the (old-last-event-id, old-snapshot) from the snapshot table
-  res <- query $ do
-    (i :*: s) <- select snapshotTable
-    order i descending
-    pure (i :*: s)
-  -- - want the one with the largest event id
+  -- read the (old-last-event-id, old-snapshot) from the snapshot table
+  -- and find the one with the largest event id
+  snapshots <- query . limit 0 1 $ do
+    s <- select snapshotTable
+    order (s ! stID) descending
+    pure s
 
+  case snapshots of
+    [] ->
+      pure Nothing
+    ((i :*: s) : _) -> do
   -- read the events after old-last-event-id and apply them to old-snapshot
   -- - also want to find the largest event id amongst these events
+      events <- query $ do
+        e <- select eventTable
+        restrict (e ! etID .>= literal i)
+        order (e ! etID) ascending
+        pure e
 
---  operation to load (row, int) from eventTable and snapshotTable
-  pure _
+      case events of
+        [] ->
+          pure Nothing
+        xs ->
+          pure . Just $ (first (last xs) :*: gatherRequests s xs)
+
 
 saveSnapshot ::
   MonadSelda m =>
@@ -80,11 +92,13 @@ saveSnapshot (r :*: i) = do
   tryCreateTable snapshotTable
 
   -- write (last-event-id, snapshot) to the snapshot table
+  insert_ snapshotTable [(r :*: i)]
   -- delete the old snapshot value
+  deleteFrom snapshotTable (\s -> s ! stID .< literal r)
   -- delete the events up to and including last-event-id
+  deleteFrom eventTable (\e -> e ! etID .<= literal r)
 
--- operation to save (row, int) to snapshotTable and then clean up eventTable and snapshotTable
-  pure _
+  pure ()
 
 vacuumEventLog ::
   MonadSelda m =>
@@ -93,7 +107,6 @@ vacuumEventLog = do
   x <- loadSnapshot
   maybe (pure ()) saveSnapshot x
   pure x
--}
 
 _Request :: Prism' (Maybe Int :*: Maybe Bool) CommandRequest
 _Request =
@@ -106,12 +119,12 @@ _Request =
   in
     prism toState fromState
 
-gatherRequests :: [RowID :*: Maybe Int :*: Maybe Bool] -> Int
-gatherRequests =
+gatherRequests :: Int -> [RowID :*: Maybe Int :*: Maybe Bool] -> Int
+gatherRequests i =
   let
     t (_ :*: xs) = xs
   in
-    foldr applyRequest 0 .
+    foldr applyRequest i .
     reverse .
     mapMaybe (preview _Request . t)
 
@@ -122,7 +135,7 @@ getEvents =
 sharedGuestDB ::
   forall t m.
   (GuestConstraintGroup t m, SeldaEvent t m) =>
-  Event t (WsData ()) ->
+  Event t WsData ->
   m (Dynamic t Int)
 sharedGuestDB eInsert = mdo
   ePostBuild <- getPostBuild
@@ -145,7 +158,7 @@ sharedGuestDB eInsert = mdo
 
   let
     eInitial =
-      fmap gatherRequests eLoad
+      fmap (gatherRequests 0) eLoad
     eRequest =
       fmapMaybe (getLast . swRequest) eSharedWriter
     eRemoves =

@@ -39,16 +39,16 @@ import Reflex
 
 data WebSocketConfig t =
   WebSocketConfig {
-    wscSend :: Event t [B.ByteString]
+    wscSend  :: Event t [B.ByteString]
   , wcsClose :: Event t (Word, B.ByteString)
   }
 
 data WebSocket t =
   WebSocket {
-    wsRead :: Event t B.ByteString
-  , wsOpen :: Event t ()
-  , wsError :: Event t ()
-  , wsClose :: Event t (Bool, Word, B.ByteString)
+    wsRead   :: Event t B.ByteString
+  , wsOpen   :: Event t ()
+  , wsError  :: Event t ()
+  , wsClosed :: Event t (Bool, Word, B.ByteString)
   }
 
 webSocket :: ( MonadHold t m
@@ -63,10 +63,11 @@ webSocket :: ( MonadHold t m
           -> m (WebSocket t)
 webSocket c (WebSocketConfig eSend eCloseIn) = do
   (eRead, triggerERead) <- newTriggerEvent
-  currentSocket <- liftIO . atomically . newTVar $ Nothing
   (eOpen, triggerEOpen) <- newTriggerEventWithOnComplete
   (eError, triggerEError) <- newTriggerEvent
   (eCloseOut, triggerECloseOut) <- newTriggerEvent
+
+  currentSocket <- liftIO . atomically . newTVar $ Nothing
   payloadQueue <- liftIO . atomically $ newTQueue
   isOpen <- liftIO . atomically $ newEmptyTMVar
 

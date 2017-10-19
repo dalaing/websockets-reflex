@@ -20,7 +20,7 @@ library
                      , Backend.Common
                      , Backend.Unique
                      , Backend.Shared
-                     , Backend.SharedDB
+                     -- , Backend.SharedDB
                      , Backend.Bounded
                      -- , Backend.Indexed
                      , Util
@@ -39,6 +39,7 @@ library
                      , lens
                      , snap-core
                      , snap-server
+                     , websockets
                      , websockets-reflex
                      , websockets-reflex-snap
                      , primitive
@@ -71,6 +72,7 @@ executable backend
                      , lens
                      , snap-core
                      , snap-server
+                     , websockets
                      , websockets-reflex
                      , websockets-reflex-snap
                      , ref-tf

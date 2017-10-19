@@ -19,6 +19,7 @@ import qualified Data.Map as Map
 
 import Reflex
 
+import Network.WebSockets
 import Reflex.WebSocket.Server
 
 import Util
@@ -30,7 +31,7 @@ boundedGuest ::
   forall t m.
   GuestConstraintGroup t m =>
   Int ->
-  Event t (WsData ()) ->
+  Event t (WsData PendingConnection) ->
   m (Dynamic t Int)
 boundedGuest bound eInsert = mdo
 

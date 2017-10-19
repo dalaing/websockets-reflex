@@ -12,6 +12,7 @@ module Backend.Unique (
     uniqueGuest
   ) where
 
+import Network.WebSockets
 import Reflex.WebSocket.Server
 
 import qualified Data.Map as Map
@@ -27,12 +28,15 @@ import Util
 import Backend.Common
 
 acceptUnique ::
-  (GuestConstraintSingle t m, Ord k) =>
+  ( GuestConstraintSingle t m
+  , MonadAdjust t m
+  , Ord k
+  ) =>
   k ->
-  WsData () ->
+  WsData PendingConnection ->
   EventWriterT t (Set k) m ()
 acceptUnique k w = mdo
-  WebSocket eRead _ _ eClose <- accept w (WebSocketConfig eWrite never)
+  WebSocket eRead _ _ eClose <- accept w (WebSocketConfig eWrite never) never
 
   dTotal <- foldRequest 0 (decodeRequest eRead)
 
@@ -45,7 +49,7 @@ acceptUnique k w = mdo
 uniqueGuest ::
   forall t m.
   GuestConstraintGroup t m =>
-  Event t (WsData ()) ->
+  Event t (WsData PendingConnection) ->
   m ()
 uniqueGuest eInsert = mdo
 
@@ -60,7 +64,7 @@ uniqueGuest eInsert = mdo
   (_, eRemoves) <-
     runEventWriterT .
     listWithKey dModel $ \k dv -> do
-      v <- sample . current $ dv
-      acceptUnique k v
+      wsd <- sample . current $ dv
+      acceptUnique k wsd
 
   return ()
